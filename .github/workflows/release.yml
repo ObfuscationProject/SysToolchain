@@ -1,0 +1,101 @@
+name: Build and release SysToolchain
+
+on:
+  push:
+    tags:
+      - "v0.1.0"
+
+jobs:
+  build:
+    name: ${{ matrix.arch }} (${{ matrix.triple }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: i386, triple: i386-elf}
+          - {arch: x86_64, triple: x86_64-elf}
+          - {arch: aarch64, triple: aarch64-elf}
+          - {arch: arm32, triple: arm-none-eabi}
+          - {arch: rv64, triple: riscv64-elf}
+          - {arch: rv32, triple: riscv32-elf}
+          - {arch: loongarch64, triple: loongarch64-elf}
+          - {arch: mips, triple: mips-elf}
+          - {arch: mips64, triple: mips64-elf}
+          - {arch: ppc, triple: powerpc-eabi}
+
+    steps:
+      - name: Check out the tagged sources
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: '3.0.9'
+
+      - name: Install host build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            build-essential m4 texinfo xz-utils ninja-build pkg-config python3-venv \
+            libglib2.0-dev libpixman-1-dev libsdl2-dev
+
+      - name: Validate release tag and target matrix
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$RELEASE_TAG" = "v0.1.0"
+          xmake test-matrix
+
+      - name: Build ${{ matrix.triple }}
+        run: >-
+          xmake build-toolchain
+          --arch=${{ matrix.arch }}
+          --prefix=${{ github.workspace }}/build/toolchains/${{ matrix.triple }}
+          --jobs=2
+
+      - name: Verify and package ${{ matrix.triple }}
+        run: >-
+          xmake package-toolchain
+          --arch=${{ matrix.arch }}
+          --sdkdir=${{ github.workspace }}/build/toolchains/${{ matrix.triple }}
+          --output-dir=${{ github.workspace }}/build/release
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: systoolchain-${{ matrix.triple }}
+          path: |
+            build/release/systoolchain-0.1.0-linux-x86_64-${{ matrix.triple }}.tar.xz
+            build/release/systoolchain-0.1.0-linux-x86_64-${{ matrix.triple }}.tar.xz.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download every target artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "SysToolchain 0.1.0" \
+              --notes "GCC 14.2.0, Binutils 2.42, and QEMU 10.2.0 for Linux x86_64 hosts."
+          gh release upload "$RELEASE_TAG" release/* --clobber
