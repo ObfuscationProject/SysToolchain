@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes \
-            build-essential m4 texinfo xz-utils ninja-build pkg-config python3-venv \
+            build-essential gawk m4 texinfo xz-utils ninja-build pkg-config python3-venv python3-tomli \
             libglib2.0-dev libpixman-1-dev libsdl2-dev
 
       - name: Validate release tag and target matrix

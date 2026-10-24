@@ -48,17 +48,27 @@ Source builds are supported on Linux and macOS hosts and require:
 - xmake 3.0.9 or newer
 - a host C and C++ compiler
 - GNU Make
-- GNU m4
-- Ninja, pkg-config, and Python 3 with venv support
+- GNU m4 and GNU awk (GCC generates LoongArch option tables with gawk)
+- Ninja, pkg-config, and Python 3 with venv support (and `tomli` before Python 3.11)
 - GLib, Pixman, and SDL2 development files
 - a tar implementation and xz support for release packaging
 
-On Ubuntu/Debian:
+On Ubuntu/Debian (`python3-tomli` is only needed before Python 3.11, for
+example on Ubuntu 22.04):
 
 ```console
 sudo apt-get install \
-    build-essential m4 texinfo xz-utils ninja-build pkg-config python3-venv \
+    build-essential gawk m4 texinfo xz-utils ninja-build pkg-config python3-venv python3-tomli \
     libglib2.0-dev libpixman-1-dev libsdl2-dev
+```
+
+QEMU links the host C library, GLib, Pixman, SDL2 and zlib dynamically; it is
+configured with `--without-default-features` so that no other host library is
+picked up by accident. A host running a prebuilt release archive therefore needs
+those shared libraries, for example on Ubuntu 24.04:
+
+```console
+sudo apt-get install libglib2.0-0t64 libpixman-1-0 libsdl2-2.0-0
 ```
 
 ## Build

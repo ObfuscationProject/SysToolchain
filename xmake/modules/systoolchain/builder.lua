@@ -253,6 +253,12 @@ function build(opt)
         "install-target-libstdc++-v3"
     }, {curdir = gcc_build, envs = envs})
 
+    -- QEMU links the host C library, GLib, Pixman, SDL2 and zlib dynamically.
+    -- A fully static link cannot work with SDL2: distribution SDL2 builds pull
+    -- in audio, udev and Wayland libraries that ship no static archives.
+    -- --without-default-features keeps the optional feature set, and with it the
+    -- runtime library set, independent of which development packages the build
+    -- host happens to have installed.
     print("[build] configuring QEMU %s for %s-softmmu",
         toolchain_config.qemu_version(), target.qemu_target)
     os.vrunv(path.join(sources.qemu, "configure"), {
@@ -260,6 +266,7 @@ function build(opt)
         "--prefix=" .. prefix,
         "--python=" .. host_tools.python.program,
         "--ninja=" .. host_tools.ninja.program,
+        "--without-default-features",
         "--disable-docs",
         "--disable-werror",
         "--disable-user",
@@ -268,24 +275,13 @@ function build(opt)
         "--disable-tools",
         "--disable-guest-agent",
         "--disable-rust",
-        "--disable-slirp",
-        "--disable-vnc",
-        "--disable-gtk",
-        "--enable-sdl",
-        "--disable-sdl-image",
-        "--disable-curses",
-        "--disable-opengl",
-        "--disable-dbus-display",
-        "--disable-spice",
-        "--disable-usb-redir",
-        "--disable-virglrenderer",
         "--disable-modules",
         "--disable-plugins",
         "--disable-download",
+        "--enable-sdl",
         "--enable-pixman",
         "--enable-fdt=internal",
-        "--enable-strip",
-        "-Dprefer_static=true"
+        "--enable-strip"
     }, {curdir = qemu_build, envs = envs})
     _ninja_build(host_tools.ninja, {target.qemu_system}, jobs, qemu_build, envs)
     os.vrunv(host_tools.ninja.program, {"install"}, {curdir = qemu_build, envs = envs})
