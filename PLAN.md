@@ -16,8 +16,8 @@ packaged and re-verified after relocation in an `ubuntu:22.04` container with
 the job's packages, and all ten kernel profiles pass `xmake test` on the
 resulting archives (installed through `SYSTOOLCHAIN_BINARY_MIRROR`).
 
-- Move the tag `v0.1.0` to that commit (no release has been published from it)
-  and confirm all ten `*.tar.xz` and `.sha256` assets on the GitHub Release.
+- Done 2026-10-25: the tag `v0.1.0` names that commit and the release workflow
+  published all ten `*.tar.xz` archives with their `.sha256` files.
 - ObfuscationKernel and ObfuscationOS default to the download path
   (`build_from_source = false`); the source build stays the documented fallback.
 
